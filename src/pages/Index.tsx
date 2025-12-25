@@ -1,6 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useStripeData, DashboardSummary } from '@/hooks/useStripeData';
 import { useManualTransactions, ManualTransaction } from '@/hooks/useManualTransactions';
+import { useAuth } from '@/hooks/useAuth';
 import { formatCurrency } from '@/lib/formatters';
 import { Header } from '@/components/dashboard/Header';
 import { StatCard } from '@/components/dashboard/StatCard';
@@ -20,6 +22,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { startOfYear } from 'date-fns';
 
 export default function Index() {
+  const { user, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
   const { getDashboardSummary, loading: stripeLoading, error: stripeError } = useStripeData();
   const { fetchTransactions, deleteTransaction, loading: txLoading } = useManualTransactions();
   
@@ -34,9 +38,18 @@ export default function Index() {
     label: 'This Year',
   });
 
+  // Redirect to auth if not logged in
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate('/auth');
+    }
+  }, [user, authLoading, navigate]);
+
   const loading = stripeLoading || txLoading;
 
   const fetchData = useCallback(async () => {
+    if (!user) return;
+    
     const [stripeResult, manualResult] = await Promise.all([
       getDashboardSummary(),
       fetchTransactions(dateRange),
@@ -48,11 +61,13 @@ export default function Index() {
     setManualTxs(manualResult);
     setLastUpdated(new Date());
     toast.success('Data refreshed');
-  }, [getDashboardSummary, fetchTransactions, dateRange]);
+  }, [getDashboardSummary, fetchTransactions, dateRange, user]);
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (user) {
+      fetchData();
+    }
+  }, [user]);
 
   useEffect(() => {
     if (stripeError) {
@@ -62,7 +77,6 @@ export default function Index() {
 
   const handleDateRangeChange = (range: DateRange) => {
     setDateRange(range);
-    // Re-fetch manual transactions with new range
     fetchTransactions(range).then(setManualTxs);
   };
 
@@ -73,6 +87,20 @@ export default function Index() {
       setManualTxs(manualTxs.filter(tx => tx.id !== id));
     }
   };
+
+  // Show loading while checking auth
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  // Don't render if not authenticated
+  if (!user) {
+    return null;
+  }
 
   // Calculate stats from real data
   const totalRevenue = (stripeData?.charges
