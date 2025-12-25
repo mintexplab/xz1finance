@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStripeData, DashboardSummary } from '@/hooks/useStripeData';
 import { useManualTransactions, ManualTransaction } from '@/hooks/useManualTransactions';
+import { useRecurringTransactions } from '@/hooks/useRecurringTransactions';
 import { useAuth } from '@/hooks/useAuth';
 import { formatCurrency } from '@/lib/formatters';
 import { Header } from '@/components/dashboard/Header';
@@ -15,6 +16,7 @@ import { RevenueChart } from '@/components/dashboard/RevenueChart';
 import { CategoryBreakdown } from '@/components/dashboard/CategoryBreakdown';
 import { ExportButton } from '@/components/dashboard/ExportButton';
 import { ManualTransactionsTable } from '@/components/dashboard/ManualTransactionsTable';
+import { RecurringTransactionsList } from '@/components/dashboard/RecurringTransactionsList';
 import { Wallet, TrendingUp, ArrowDownRight, CreditCard } from 'lucide-react';
 import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -26,6 +28,14 @@ export default function Index() {
   const navigate = useNavigate();
   const { getDashboardSummary, loading: stripeLoading, error: stripeError } = useStripeData();
   const { fetchTransactions, deleteTransaction, loading: txLoading } = useManualTransactions();
+  const {
+    transactions: recurringTxs,
+    loading: recurringLoading,
+    addTransaction: addRecurringTx,
+    toggleActive: toggleRecurringActive,
+    deleteTransaction: deleteRecurringTx,
+    calculateRecurringTotal,
+  } = useRecurringTransactions(user?.sub);
   
   const [stripeData, setStripeData] = useState<DashboardSummary | null>(null);
   const [manualTxs, setManualTxs] = useState<ManualTransaction[]>([]);
@@ -102,17 +112,22 @@ export default function Index() {
     return null;
   }
 
+  // Calculate recurring totals for the selected date range
+  const recurringTotals = calculateRecurringTotal(dateRange.start, dateRange.end);
+
   // Calculate stats from real data
   const totalRevenue = (stripeData?.charges
     .filter(c => c.status === 'succeeded')
     .reduce((sum, c) => sum + c.amount, 0) || 0) +
     manualTxs
       .filter(tx => tx.type === 'income' || tx.type === 'royalty')
-      .reduce((sum, tx) => sum + Number(tx.amount), 0);
+      .reduce((sum, tx) => sum + Number(tx.amount), 0) +
+    recurringTotals.totalIncome;
 
   const totalExpenses = manualTxs
     .filter(tx => tx.type === 'expense')
-    .reduce((sum, tx) => sum + Number(tx.amount), 0);
+    .reduce((sum, tx) => sum + Number(tx.amount), 0) +
+    recurringTotals.totalExpense;
 
   const totalFees = stripeData?.charges
     .filter(c => c.status === 'succeeded' && typeof c.balance_transaction === 'object')
@@ -212,6 +227,7 @@ export default function Index() {
           <TabsList className="glass-card p-1">
             <TabsTrigger value="stripe">Stripe Transactions</TabsTrigger>
             <TabsTrigger value="manual">Manual Entries</TabsTrigger>
+            <TabsTrigger value="recurring">Recurring</TabsTrigger>
           </TabsList>
           <TabsContent value="stripe" className="mt-6">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -238,6 +254,15 @@ export default function Index() {
               transactions={manualTxs} 
               loading={txLoading}
               onDelete={handleDeleteTx}
+            />
+          </TabsContent>
+          <TabsContent value="recurring" className="mt-6">
+            <RecurringTransactionsList
+              transactions={recurringTxs}
+              loading={recurringLoading}
+              onAdd={addRecurringTx}
+              onToggle={toggleRecurringActive}
+              onDelete={deleteRecurringTx}
             />
           </TabsContent>
         </Tabs>
