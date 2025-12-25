@@ -22,7 +22,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { startOfYear } from 'date-fns';
 
 export default function Index() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const { getDashboardSummary, loading: stripeLoading, error: stripeError } = useStripeData();
   const { fetchTransactions, deleteTransaction, loading: txLoading } = useManualTransactions();
@@ -40,15 +40,15 @@ export default function Index() {
 
   // Redirect to auth if not logged in
   useEffect(() => {
-    if (!authLoading && !user) {
+    if (!authLoading && !isAuthenticated) {
       navigate('/auth');
     }
-  }, [user, authLoading, navigate]);
+  }, [isAuthenticated, authLoading, navigate]);
 
   const loading = stripeLoading || txLoading;
 
   const fetchData = useCallback(async () => {
-    if (!user) return;
+    if (!isAuthenticated) return;
     
     const [stripeResult, manualResult] = await Promise.all([
       getDashboardSummary(),
@@ -61,13 +61,13 @@ export default function Index() {
     setManualTxs(manualResult);
     setLastUpdated(new Date());
     toast.success('Data refreshed');
-  }, [getDashboardSummary, fetchTransactions, dateRange, user]);
+  }, [getDashboardSummary, fetchTransactions, dateRange, isAuthenticated]);
 
   useEffect(() => {
-    if (user) {
+    if (isAuthenticated) {
       fetchData();
     }
-  }, [user]);
+  }, [isAuthenticated]);
 
   useEffect(() => {
     if (stripeError) {
@@ -98,7 +98,7 @@ export default function Index() {
   }
 
   // Don't render if not authenticated
-  if (!user) {
+  if (!isAuthenticated) {
     return null;
   }
 
