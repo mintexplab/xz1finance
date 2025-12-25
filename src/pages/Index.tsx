@@ -1,55 +1,103 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useStripeData, DashboardSummary, StripeBalance } from '@/hooks/useStripeData';
+import { useStripeData, DashboardSummary } from '@/hooks/useStripeData';
+import { useManualTransactions, ManualTransaction } from '@/hooks/useManualTransactions';
 import { formatCurrency } from '@/lib/formatters';
 import { Header } from '@/components/dashboard/Header';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { TransactionTable } from '@/components/dashboard/TransactionTable';
 import { PayoutsList } from '@/components/dashboard/PayoutsList';
 import { BalanceBreakdown } from '@/components/dashboard/BalanceBreakdown';
+import { AddTransactionDialog } from '@/components/dashboard/AddTransactionDialog';
+import { DateRangeFilter, DateRange } from '@/components/dashboard/DateRangeFilter';
+import { RevenueChart } from '@/components/dashboard/RevenueChart';
+import { CategoryBreakdown } from '@/components/dashboard/CategoryBreakdown';
+import { ExportButton } from '@/components/dashboard/ExportButton';
+import { ManualTransactionsTable } from '@/components/dashboard/ManualTransactionsTable';
 import { Wallet, TrendingUp, ArrowDownRight, CreditCard } from 'lucide-react';
 import { toast } from 'sonner';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { startOfYear } from 'date-fns';
 
 export default function Index() {
-  const { getDashboardSummary, loading, error } = useStripeData();
-  const [data, setData] = useState<DashboardSummary | null>(null);
+  const { getDashboardSummary, loading: stripeLoading, error: stripeError } = useStripeData();
+  const { fetchTransactions, deleteTransaction, loading: txLoading } = useManualTransactions();
+  
+  const [stripeData, setStripeData] = useState<DashboardSummary | null>(null);
+  const [manualTxs, setManualTxs] = useState<ManualTransaction[]>([]);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [chartGroupBy, setChartGroupBy] = useState<'day' | 'week' | 'month'>('month');
+  
+  const [dateRange, setDateRange] = useState<DateRange>({
+    start: startOfYear(new Date()),
+    end: new Date(),
+    label: 'This Year',
+  });
+
+  const loading = stripeLoading || txLoading;
 
   const fetchData = useCallback(async () => {
-    const result = await getDashboardSummary();
-    if (result) {
-      setData(result);
-      setLastUpdated(new Date());
-      toast.success('Data refreshed');
+    const [stripeResult, manualResult] = await Promise.all([
+      getDashboardSummary(),
+      fetchTransactions(dateRange),
+    ]);
+    
+    if (stripeResult) {
+      setStripeData(stripeResult);
     }
-  }, [getDashboardSummary]);
+    setManualTxs(manualResult);
+    setLastUpdated(new Date());
+    toast.success('Data refreshed');
+  }, [getDashboardSummary, fetchTransactions, dateRange]);
 
   useEffect(() => {
     fetchData();
   }, []);
 
   useEffect(() => {
-    if (error) {
-      toast.error(error);
+    if (stripeError) {
+      toast.error(stripeError);
     }
-  }, [error]);
+  }, [stripeError]);
+
+  const handleDateRangeChange = (range: DateRange) => {
+    setDateRange(range);
+    // Re-fetch manual transactions with new range
+    fetchTransactions(range).then(setManualTxs);
+  };
+
+  const handleDeleteTx = async (id: string) => {
+    const success = await deleteTransaction(id);
+    if (success) {
+      toast.success('Transaction deleted');
+      setManualTxs(manualTxs.filter(tx => tx.id !== id));
+    }
+  };
 
   // Calculate stats from real data
-  const totalRevenue = data?.charges
+  const totalRevenue = (stripeData?.charges
     .filter(c => c.status === 'succeeded')
-    .reduce((sum, c) => sum + c.amount, 0) || 0;
+    .reduce((sum, c) => sum + c.amount, 0) || 0) +
+    manualTxs
+      .filter(tx => tx.type === 'income' || tx.type === 'royalty')
+      .reduce((sum, tx) => sum + Number(tx.amount), 0);
 
-  const totalFees = data?.charges
+  const totalExpenses = manualTxs
+    .filter(tx => tx.type === 'expense')
+    .reduce((sum, tx) => sum + Number(tx.amount), 0);
+
+  const totalFees = stripeData?.charges
     .filter(c => c.status === 'succeeded' && typeof c.balance_transaction === 'object')
     .reduce((sum, c) => {
       const bt = c.balance_transaction;
       return sum + (typeof bt === 'object' && bt ? bt.fee : 0);
     }, 0) || 0;
 
-  const successfulPayments = data?.charges.filter(c => c.status === 'succeeded').length || 0;
+  const successfulPayments = (stripeData?.charges.filter(c => c.status === 'succeeded').length || 0) +
+    manualTxs.filter(tx => tx.type === 'income').length;
 
-  const availableBalance = data?.balance?.available?.reduce((sum, b) => sum + b.amount, 0) || 0;
-
-  const primaryCurrency = data?.balance?.available?.[0]?.currency || 'cad';
+  const availableBalance = stripeData?.balance?.available?.reduce((sum, b) => sum + b.amount, 0) || 0;
+  const primaryCurrency = stripeData?.balance?.available?.[0]?.currency || 'cad';
 
   return (
     <div className="min-h-screen bg-background">
@@ -62,6 +110,19 @@ export default function Index() {
       <Header onRefresh={fetchData} loading={loading} lastUpdated={lastUpdated} />
 
       <main className="container mx-auto px-6 py-8 relative">
+        {/* Controls Bar */}
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
+          <DateRangeFilter value={dateRange} onChange={handleDateRangeChange} />
+          <div className="flex items-center gap-3">
+            <ExportButton 
+              dateRange={dateRange} 
+              stripeCharges={stripeData?.charges || []} 
+              manualTransactions={manualTxs} 
+            />
+            <AddTransactionDialog onSuccess={fetchData} />
+          </div>
+        </div>
+
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <StatCard
@@ -74,45 +135,84 @@ export default function Index() {
           <StatCard
             title="Total Revenue"
             value={formatCurrency(totalRevenue, primaryCurrency)}
-            subtitle="All time"
+            subtitle="Stripe + Manual"
             icon={TrendingUp}
           />
           <StatCard
-            title="Stripe Fees"
-            value={formatCurrency(totalFees, primaryCurrency)}
-            subtitle="Processing fees"
+            title="Total Expenses"
+            value={formatCurrency(totalExpenses + totalFees, primaryCurrency)}
+            subtitle="Expenses + Fees"
             icon={ArrowDownRight}
           />
           <StatCard
-            title="Successful Payments"
+            title="Transactions"
             value={successfulPayments.toString()}
-            subtitle="Last 100 transactions"
+            subtitle="Income transactions"
             icon={CreditCard}
           />
         </div>
 
-        {/* Main Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Transactions Table - Takes 2 columns */}
+        {/* Charts Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           <div className="lg:col-span-2">
-            <TransactionTable 
-              transactions={data?.charges.filter(c => c.status === 'succeeded') || []} 
-              loading={loading && !data}
+            <div className="flex items-center justify-between mb-4">
+              <Select value={chartGroupBy} onValueChange={(v) => setChartGroupBy(v as 'day' | 'week' | 'month')}>
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="day">By Day</SelectItem>
+                  <SelectItem value="week">By Week</SelectItem>
+                  <SelectItem value="month">By Month</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <RevenueChart 
+              stripeCharges={stripeData?.charges || []} 
+              manualTransactions={manualTxs}
+              groupBy={chartGroupBy}
             />
           </div>
-
-          {/* Sidebar */}
-          <div className="space-y-6">
-            <BalanceBreakdown 
-              balance={data?.balance || null} 
-              loading={loading && !data}
-            />
-            <PayoutsList 
-              payouts={data?.payouts || []} 
-              loading={loading && !data}
-            />
-          </div>
+          <CategoryBreakdown 
+            stripeCharges={stripeData?.charges || []} 
+            manualTransactions={manualTxs}
+          />
         </div>
+
+        {/* Transactions Tabs */}
+        <Tabs defaultValue="stripe" className="mb-8">
+          <TabsList className="glass-card p-1">
+            <TabsTrigger value="stripe">Stripe Transactions</TabsTrigger>
+            <TabsTrigger value="manual">Manual Entries</TabsTrigger>
+          </TabsList>
+          <TabsContent value="stripe" className="mt-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2">
+                <TransactionTable 
+                  transactions={stripeData?.charges.filter(c => c.status === 'succeeded') || []} 
+                  loading={loading && !stripeData}
+                />
+              </div>
+              <div className="space-y-6">
+                <BalanceBreakdown 
+                  balance={stripeData?.balance || null} 
+                  loading={loading && !stripeData}
+                />
+                <PayoutsList 
+                  payouts={stripeData?.payouts || []} 
+                  loading={loading && !stripeData}
+                />
+              </div>
+            </div>
+          </TabsContent>
+          <TabsContent value="manual" className="mt-6">
+            <ManualTransactionsTable 
+              transactions={manualTxs} 
+              loading={txLoading}
+              onDelete={handleDeleteTx}
+            />
+          </TabsContent>
+        </Tabs>
       </main>
     </div>
   );
