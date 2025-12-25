@@ -1,7 +1,6 @@
 import { RefreshCw, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
-import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
 interface HeaderProps {
@@ -11,13 +10,11 @@ interface HeaderProps {
 }
 
 export function Header({ onRefresh, loading, lastUpdated }: HeaderProps) {
-  const { signOut, user } = useAuth();
-  const navigate = useNavigate();
+  const { signOut, user, isAuthenticated } = useAuth();
 
   const handleSignOut = async () => {
     await signOut();
     toast.success('Signed out successfully');
-    navigate('/auth');
   };
 
   return (
@@ -37,9 +34,14 @@ export function Header({ onRefresh, loading, lastUpdated }: HeaderProps) {
           </div>
 
           <div className="flex items-center gap-4">
+            {user?.email && (
+              <span className="text-xs text-muted-foreground hidden md:block">
+                {user.email}
+              </span>
+            )}
             {lastUpdated && (
               <span className="text-xs text-muted-foreground hidden sm:block">
-                Last updated: {lastUpdated.toLocaleTimeString()}
+                Updated: {lastUpdated.toLocaleTimeString()}
               </span>
             )}
             <Button 
@@ -52,7 +54,7 @@ export function Header({ onRefresh, loading, lastUpdated }: HeaderProps) {
               <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
               Refresh
             </Button>
-            {user && (
+            {isAuthenticated && (
               <Button 
                 onClick={handleSignOut}
                 variant="ghost"
