@@ -35,6 +35,15 @@ export function useRecurringTransactions(userId: string | undefined) {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
+  const callEdgeFunction = async (action: string, data?: any, id?: string) => {
+    const { data: result, error } = await supabase.functions.invoke('recurring-transactions', {
+      body: { action, userId, data, id },
+    });
+
+    if (error) throw error;
+    return result;
+  };
+
   const fetchTransactions = async () => {
     if (!userId) {
       setTransactions([]);
@@ -44,15 +53,10 @@ export function useRecurringTransactions(userId: string | undefined) {
 
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('recurring_transactions')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setTransactions(data as RecurringTransaction[] || []);
-    } catch (error: any) {
+      const result = await callEdgeFunction('list');
+      setTransactions(result.transactions || []);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       console.error('Error fetching recurring transactions:', error);
       toast({
         title: 'Error',
@@ -68,26 +72,20 @@ export function useRecurringTransactions(userId: string | undefined) {
     if (!userId) return { error: new Error('Not authenticated') };
 
     try {
-      const { data, error } = await supabase
-        .from('recurring_transactions')
-        .insert({
-          ...input,
-          user_id: userId,
-          currency: input.currency || 'CAD',
-          is_active: input.is_active ?? true,
-        })
-        .select()
-        .single();
+      const result = await callEdgeFunction('create', {
+        ...input,
+        currency: input.currency || 'CAD',
+        is_active: input.is_active ?? true,
+      });
 
-      if (error) throw error;
-
-      setTransactions(prev => [data as RecurringTransaction, ...prev]);
+      setTransactions(prev => [result.transaction, ...prev]);
       toast({
         title: 'Success',
         description: 'Recurring transaction added',
       });
-      return { data };
-    } catch (error: any) {
+      return { data: result.transaction };
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       console.error('Error adding recurring transaction:', error);
       toast({
         title: 'Error',
@@ -100,24 +98,18 @@ export function useRecurringTransactions(userId: string | undefined) {
 
   const updateTransaction = async (id: string, updates: Partial<RecurringTransactionInput>) => {
     try {
-      const { data, error } = await supabase
-        .from('recurring_transactions')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) throw error;
+      const result = await callEdgeFunction('update', updates, id);
 
       setTransactions(prev =>
-        prev.map(t => (t.id === id ? (data as RecurringTransaction) : t))
+        prev.map(t => (t.id === id ? result.transaction : t))
       );
       toast({
         title: 'Success',
         description: 'Recurring transaction updated',
       });
-      return { data };
-    } catch (error: any) {
+      return { data: result.transaction };
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       console.error('Error updating recurring transaction:', error);
       toast({
         title: 'Error',
@@ -130,12 +122,7 @@ export function useRecurringTransactions(userId: string | undefined) {
 
   const deleteTransaction = async (id: string) => {
     try {
-      const { error } = await supabase
-        .from('recurring_transactions')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
+      await callEdgeFunction('delete', undefined, id);
 
       setTransactions(prev => prev.filter(t => t.id !== id));
       toast({
@@ -143,7 +130,8 @@ export function useRecurringTransactions(userId: string | undefined) {
         description: 'Recurring transaction deleted',
       });
       return { success: true };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       console.error('Error deleting recurring transaction:', error);
       toast({
         title: 'Error',
