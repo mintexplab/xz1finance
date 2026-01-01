@@ -14,6 +14,96 @@ export type Database = {
   }
   public: {
     Tables: {
+      business_entity: {
+        Row: {
+          company_name: string
+          created_at: string
+          entity_type: string
+          fiscal_year_end: string | null
+          hawaii_business_id: string | null
+          id: string
+          incorporation_date: string | null
+          irs_ein: string | null
+          registered_agent_address: string | null
+          registered_agent_name: string | null
+          registered_agent_phone: string | null
+          state_of_incorporation: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          company_name?: string
+          created_at?: string
+          entity_type?: string
+          fiscal_year_end?: string | null
+          hawaii_business_id?: string | null
+          id?: string
+          incorporation_date?: string | null
+          irs_ein?: string | null
+          registered_agent_address?: string | null
+          registered_agent_name?: string | null
+          registered_agent_phone?: string | null
+          state_of_incorporation?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          company_name?: string
+          created_at?: string
+          entity_type?: string
+          fiscal_year_end?: string | null
+          hawaii_business_id?: string | null
+          id?: string
+          incorporation_date?: string | null
+          irs_ein?: string | null
+          registered_agent_address?: string | null
+          registered_agent_name?: string | null
+          registered_agent_phone?: string | null
+          state_of_incorporation?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      domains: {
+        Row: {
+          auto_renew: boolean | null
+          created_at: string
+          domain_name: string
+          expiration_date: string | null
+          id: string
+          notes: string | null
+          primary_use: string | null
+          registrar: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          auto_renew?: boolean | null
+          created_at?: string
+          domain_name: string
+          expiration_date?: string | null
+          id?: string
+          notes?: string | null
+          primary_use?: string | null
+          registrar?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          auto_renew?: boolean | null
+          created_at?: string
+          domain_name?: string
+          expiration_date?: string | null
+          id?: string
+          notes?: string | null
+          primary_use?: string | null
+          registrar?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       manual_transactions: {
         Row: {
           amount: number

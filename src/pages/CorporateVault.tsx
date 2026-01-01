@@ -1,73 +1,28 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { useCorporateVault } from '@/hooks/useCorporateVault';
 import { EntityCards } from '@/components/executive/EntityCards';
 import { DomainPortfolio } from '@/components/executive/DomainPortfolio';
+import { EditEntityDialog } from '@/components/executive/EditEntityDialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Building2, Calendar } from 'lucide-react';
 import { format } from 'date-fns';
 
-// Static entity data - can be moved to a config or database later
-const ENTITY_DATA = {
-  entityType: 'C Corporation',
-  state: 'Hawaii',
-  incorporationDate: '2024-12-01',
-  hawaiiBusinessId: undefined, // Will be filled when received
-  irsEin: undefined, // Will be filled when received
-  registeredAgent: {
-    name: 'Northwest Registered Agent',
-    address: '1003 Bishop St, Pauahi Tower Suite 1440, Honolulu, HI 96813',
-    phone: '(808) 123-4567',
-  },
-};
-
-// Domain portfolio data
-const DOMAINS = [
-  {
-    name: 'xz1.ca',
-    registrar: 'CIRA',
-    expirationDate: '2025-12-15',
-    autoRenew: true,
-    status: 'active' as const,
-    primaryUse: 'Brand Shortlink',
-  },
-  {
-    name: 'jackpotmusik.de',
-    registrar: 'DENIC',
-    expirationDate: '2025-08-20',
-    autoRenew: true,
-    status: 'active' as const,
-    primaryUse: 'Artist Project',
-  },
-  {
-    name: 'xz1recordings.ca',
-    registrar: 'CIRA',
-    expirationDate: '2025-11-10',
-    autoRenew: true,
-    status: 'active' as const,
-    primaryUse: 'Label Website',
-  },
-  {
-    name: 'xz1recordingventures.com',
-    registrar: 'Cloudflare',
-    expirationDate: '2025-12-01',
-    autoRenew: true,
-    status: 'active' as const,
-    primaryUse: 'Corporate HQ',
-  },
-  {
-    name: 'trackball.cc',
-    registrar: 'Cloudflare',
-    expirationDate: '2026-01-15',
-    autoRenew: true,
-    status: 'active' as const,
-    primaryUse: 'Distribution Platform',
-  },
-];
-
 export default function CorporateVault() {
-  const { loading: authLoading, isAuthenticated } = useAuth();
+  const { loading: authLoading, isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
+  const [editEntityOpen, setEditEntityOpen] = useState(false);
+
+  const {
+    entity,
+    domains,
+    loading,
+    saveEntity,
+    addDomain,
+    updateDomain,
+    deleteDomain,
+  } = useCorporateVault(user?.sub);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -75,7 +30,7 @@ export default function CorporateVault() {
     }
   }, [isAuthenticated, authLoading, navigate]);
 
-  if (authLoading) {
+  if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
@@ -86,6 +41,12 @@ export default function CorporateVault() {
   if (!isAuthenticated) {
     return null;
   }
+
+  const companyName = entity?.company_name || 'XZ1 Recording Ventures Inc.';
+  const entityType = entity?.entity_type || 'C Corporation';
+  const state = entity?.state_of_incorporation || 'Hawaii';
+  const incorporationDate = entity?.incorporation_date;
+  const fiscalYearEnd = entity?.fiscal_year_end || 'December 31';
 
   return (
     <div className="min-h-screen bg-background">
@@ -100,7 +61,7 @@ export default function CorporateVault() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold tracking-tight">Corporate Vault</h1>
           <p className="text-muted-foreground mt-1">
-            XZ1 Recording Ventures Inc. entity information and assets
+            {companyName} entity information and assets
           </p>
         </div>
 
@@ -109,29 +70,31 @@ export default function CorporateVault() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Building2 className="h-5 w-5 text-primary" />
-              XZ1 Recording Ventures Inc.
+              {companyName}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               <div>
                 <p className="text-sm text-muted-foreground">Entity Type</p>
-                <p className="font-semibold">{ENTITY_DATA.entityType}</p>
+                <p className="font-semibold">{entityType}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">State of Incorporation</p>
-                <p className="font-semibold">{ENTITY_DATA.state}</p>
+                <p className="font-semibold">{state}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Incorporation Date</p>
                 <p className="font-semibold flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-muted-foreground" />
-                  {format(new Date(ENTITY_DATA.incorporationDate), 'MMMM d, yyyy')}
+                  {incorporationDate 
+                    ? format(new Date(incorporationDate), 'MMMM d, yyyy')
+                    : 'Not set'}
                 </p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Fiscal Year End</p>
-                <p className="font-semibold">December 31</p>
+                <p className="font-semibold">{fiscalYearEnd}</p>
               </div>
             </div>
           </CardContent>
@@ -139,12 +102,27 @@ export default function CorporateVault() {
 
         {/* Entity ID Cards */}
         <div className="mb-8">
-          <h2 className="text-xl font-semibold mb-4">Entity Identifiers</h2>
-          <EntityCards data={ENTITY_DATA} />
+          <EntityCards 
+            entity={entity} 
+            onEdit={() => setEditEntityOpen(true)} 
+          />
         </div>
 
         {/* Domain Portfolio */}
-        <DomainPortfolio domains={DOMAINS} />
+        <DomainPortfolio 
+          domains={domains}
+          onAdd={addDomain}
+          onUpdate={updateDomain}
+          onDelete={deleteDomain}
+        />
+
+        {/* Edit Entity Dialog */}
+        <EditEntityDialog
+          open={editEntityOpen}
+          onOpenChange={setEditEntityOpen}
+          entity={entity}
+          onSave={saveEntity}
+        />
       </main>
     </div>
   );

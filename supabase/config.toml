@@ -3,5 +3,8 @@ project_id = "otdsmbqmygcxysaubvbj"
 [functions.stripe-data]
 verify_jwt = false
 
+[functions.corporate-vault]
+verify_jwt = false
+
 [functions.recurring-transactions]
 verify_jwt = false
