@@ -17,11 +17,26 @@ import { CategoryBreakdown } from '@/components/dashboard/CategoryBreakdown';
 import { ExportButton } from '@/components/dashboard/ExportButton';
 import { ManualTransactionsTable } from '@/components/dashboard/ManualTransactionsTable';
 import { RecurringTransactionsList } from '@/components/dashboard/RecurringTransactionsList';
+import { RevenueLedger } from '@/components/executive/RevenueLedger';
+import { TaxClock } from '@/components/executive/TaxClock';
 import { Wallet, TrendingUp, ArrowDownRight, CreditCard } from 'lucide-react';
 import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { startOfYear } from 'date-fns';
+import { generateArtistStatement } from '@/lib/artistStatementPdf';
+
+interface RevenueEntry {
+  id: string;
+  date: string;
+  partner: string;
+  grossRevenue: number;
+  artistSplit: number;
+  labelSplit: number;
+  publisherSplit: number;
+  adminSplit: number;
+  currency: string;
+}
 
 export default function Index() {
   const { user, loading: authLoading, isAuthenticated } = useAuth();
@@ -41,6 +56,7 @@ export default function Index() {
   const [manualTxs, setManualTxs] = useState<ManualTransaction[]>([]);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [chartGroupBy, setChartGroupBy] = useState<'day' | 'week' | 'month'>('month');
+  const [revenueEntries, setRevenueEntries] = useState<RevenueEntry[]>([]);
   
   const [dateRange, setDateRange] = useState<DateRange>({
     start: startOfYear(new Date()),
@@ -96,6 +112,30 @@ export default function Index() {
       toast.success('Transaction deleted');
       setManualTxs(manualTxs.filter(tx => tx.id !== id));
     }
+  };
+
+  // Revenue Ledger handlers
+  const handleAddRevenueEntry = (entry: Omit<RevenueEntry, 'id' | 'artistSplit' | 'labelSplit' | 'publisherSplit' | 'adminSplit'>) => {
+    const newEntry: RevenueEntry = {
+      ...entry,
+      id: crypto.randomUUID(),
+      artistSplit: entry.grossRevenue * 0.3,
+      labelSplit: entry.grossRevenue * 0.7,
+      publisherSplit: entry.grossRevenue * 0.4,
+      adminSplit: entry.grossRevenue * 0.6,
+    };
+    setRevenueEntries([...revenueEntries, newEntry]);
+    toast.success('Revenue entry added');
+  };
+
+  const handleDeleteRevenueEntry = (id: string) => {
+    setRevenueEntries(revenueEntries.filter(e => e.id !== id));
+    toast.success('Revenue entry deleted');
+  };
+
+  const handleGenerateStatement = (artistName: string, entries: RevenueEntry[]) => {
+    generateArtistStatement({ artistName, entries });
+    toast.success('Artist statement generated');
   };
 
   // Show loading while checking auth
@@ -193,6 +233,19 @@ export default function Index() {
             subtitle="Income transactions"
             icon={CreditCard}
           />
+        </div>
+
+        {/* Revenue Ledger & Tax Clock */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          <div className="lg:col-span-2">
+            <RevenueLedger
+              entries={revenueEntries}
+              onAddEntry={handleAddRevenueEntry}
+              onDeleteEntry={handleDeleteRevenueEntry}
+              onGenerateStatement={handleGenerateStatement}
+            />
+          </div>
+          <TaxClock incorporationDate={new Date('2024-12-01')} />
         </div>
 
         {/* Charts Section */}
