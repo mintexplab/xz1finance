@@ -2,6 +2,7 @@ import { RefreshCw, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
+import xz1Logo from '@/assets/xz1-logo.png';
 
 interface HeaderProps {
   onRefresh: () => void;
@@ -19,21 +20,17 @@ export function Header({ onRefresh, loading, lastUpdated }: HeaderProps) {
 
   return (
     <header className="border-b border-border bg-card/50 backdrop-blur-xl sticky top-0 z-50">
-      <div className="container mx-auto px-6 py-4">
+      <div className="container mx-auto px-6 py-3">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="relative">
-              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary to-primary/50 flex items-center justify-center glow-pink">
-                <span className="text-xl font-bold">X</span>
-              </div>
-            </div>
+          <div className="flex items-center gap-3">
+            <img src={xz1Logo} alt="XZ1" className="h-8 w-auto" />
             <div>
-              <h1 className="text-xl font-bold tracking-tight">XZ1 Recording Ventures</h1>
-              <p className="text-sm text-muted-foreground">Financial Dashboard</p>
+              <h1 className="text-lg font-bold tracking-tight">XZ1 Corporation Manager</h1>
+              <p className="text-xs text-muted-foreground">Finance Hub</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             {user?.email && (
               <span className="text-xs text-muted-foreground hidden md:block">
                 {user.email}

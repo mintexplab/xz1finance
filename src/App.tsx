@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/executive/AppSidebar";
+import { Footer } from "@/components/layout/Footer";
 import Index from "./pages/Index";
 import CorporateVault from "./pages/CorporateVault";
 import Auth from "./pages/Auth";
@@ -22,15 +23,18 @@ function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full">
-        <AppSidebar />
-        <SidebarInset className="flex-1">
-          <header className="h-14 flex items-center border-b border-border/50 px-4 bg-background/80 backdrop-blur-sm sticky top-0 z-40">
-            <SidebarTrigger className="mr-4" />
-            <span className="text-sm text-muted-foreground">XZ1 Executive Command</span>
-          </header>
-          {children}
-        </SidebarInset>
+      <div className="min-h-screen flex w-full flex-col">
+        <div className="flex flex-1">
+          <AppSidebar />
+          <SidebarInset className="flex-1 flex flex-col">
+            <header className="h-12 flex items-center border-b border-border/50 px-4 bg-background/80 backdrop-blur-sm sticky top-0 z-40">
+              <SidebarTrigger className="mr-4" />
+              <span className="text-sm text-muted-foreground">XZ1 Executive Command</span>
+            </header>
+            <div className="flex-1">{children}</div>
+            <Footer />
+          </SidebarInset>
+        </div>
       </div>
     </SidebarProvider>
   );
