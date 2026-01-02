@@ -27,9 +27,20 @@ export interface Domain {
   notes?: string;
 }
 
+export interface CorporateEvent {
+  id?: string;
+  title: string;
+  description?: string;
+  event_date: string;
+  event_type: string;
+  is_reminder: boolean;
+  reminder_days: number;
+}
+
 export function useCorporateVault(userId: string | undefined) {
   const [entity, setEntity] = useState<BusinessEntity | null>(null);
   const [domains, setDomains] = useState<Domain[]>([]);
+  const [events, setEvents] = useState<CorporateEvent[]>([]);
   const [loading, setLoading] = useState(true);
 
   const loadData = useCallback(async () => {
@@ -41,7 +52,7 @@ export function useCorporateVault(userId: string | undefined) {
     setLoading(true);
     
     try {
-      // Fetch entity (using POST with action: 'get')
+      // Fetch entity
       const entityRes = await fetch(`${FUNCTION_URL}/entity`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -55,7 +66,7 @@ export function useCorporateVault(userId: string | undefined) {
         }
       }
 
-      // Fetch domains (using POST with action: 'get')
+      // Fetch domains
       const domainsRes = await fetch(`${FUNCTION_URL}/domains`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -65,6 +76,18 @@ export function useCorporateVault(userId: string | undefined) {
       if (domainsRes.ok) {
         const domainsData = await domainsRes.json();
         setDomains(domainsData || []);
+      }
+
+      // Fetch events
+      const eventsRes = await fetch(`${FUNCTION_URL}/events`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, action: 'get' }),
+      });
+      
+      if (eventsRes.ok) {
+        const eventsData = await eventsRes.json();
+        setEvents(eventsData || []);
       }
     } catch (error) {
       console.error('Error loading data:', error);
@@ -86,7 +109,10 @@ export function useCorporateVault(userId: string | undefined) {
         body: JSON.stringify({ userId, ...data }),
       });
 
-      if (!response.ok) throw new Error('Failed to save entity');
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to save entity');
+      }
       
       const result = await response.json();
       setEntity(result);
@@ -108,7 +134,10 @@ export function useCorporateVault(userId: string | undefined) {
         body: JSON.stringify({ userId, ...data }),
       });
 
-      if (!response.ok) throw new Error('Failed to add domain');
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to add domain');
+      }
       
       const result = await response.json();
       setDomains(prev => [...prev, result]);
@@ -130,7 +159,10 @@ export function useCorporateVault(userId: string | undefined) {
         body: JSON.stringify({ userId, ...data }),
       });
 
-      if (!response.ok) throw new Error('Failed to update domain');
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to update domain');
+      }
       
       const result = await response.json();
       setDomains(prev => prev.map(d => d.id === id ? result : d));
@@ -152,7 +184,10 @@ export function useCorporateVault(userId: string | undefined) {
         body: JSON.stringify({ userId }),
       });
 
-      if (!response.ok) throw new Error('Failed to delete domain');
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to delete domain');
+      }
       
       setDomains(prev => prev.filter(d => d.id !== id));
       toast.success('Domain deleted');
@@ -163,14 +198,92 @@ export function useCorporateVault(userId: string | undefined) {
     }
   };
 
+  // Corporate Events CRUD
+  const addEvent = async (data: Omit<CorporateEvent, 'id'>) => {
+    if (!userId) return;
+    try {
+      const response = await fetch(`${FUNCTION_URL}/events`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, ...data }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to add event');
+      }
+      
+      const result = await response.json();
+      setEvents(prev => [...prev, result]);
+      toast.success('Event added');
+      return result;
+    } catch (error) {
+      console.error('Error adding event:', error);
+      toast.error('Failed to add event');
+      throw error;
+    }
+  };
+
+  const updateEvent = async (id: string, data: Partial<CorporateEvent>) => {
+    if (!userId) return;
+    try {
+      const response = await fetch(`${FUNCTION_URL}/event?id=${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, ...data }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to update event');
+      }
+      
+      const result = await response.json();
+      setEvents(prev => prev.map(e => e.id === id ? result : e));
+      toast.success('Event updated');
+      return result;
+    } catch (error) {
+      console.error('Error updating event:', error);
+      toast.error('Failed to update event');
+      throw error;
+    }
+  };
+
+  const deleteEvent = async (id: string) => {
+    if (!userId) return;
+    try {
+      const response = await fetch(`${FUNCTION_URL}/event?id=${id}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to delete event');
+      }
+      
+      setEvents(prev => prev.filter(e => e.id !== id));
+      toast.success('Event deleted');
+    } catch (error) {
+      console.error('Error deleting event:', error);
+      toast.error('Failed to delete event');
+      throw error;
+    }
+  };
+
   return {
     entity,
     domains,
+    events,
     loading,
     saveEntity,
     addDomain,
     updateDomain,
     deleteDomain,
+    addEvent,
+    updateEvent,
+    deleteEvent,
     refresh: loadData,
   };
 }

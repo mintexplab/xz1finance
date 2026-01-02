@@ -1,6 +1,7 @@
 import { DollarSign, Building2 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
+import xz1Logo from '@/assets/xz1-logo.png';
 
 import {
   Sidebar,
@@ -15,7 +16,7 @@ import {
 } from "@/components/ui/sidebar";
 
 const navItems = [
-  { title: "Finance Manager", url: "/", icon: DollarSign },
+  { title: "Finance Hub", url: "/", icon: DollarSign },
   { title: "Corporate Vault", url: "/vault", icon: Building2 },
 ];
 
@@ -33,12 +34,10 @@ export function AppSidebar() {
     >
       <SidebarHeader className="p-4 border-b border-border/50">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center glow-pink">
-            <span className="font-bold text-primary-foreground text-lg">X</span>
-          </div>
+          <img src={xz1Logo} alt="XZ1" className="h-8 w-auto" />
           {!collapsed && (
             <div className="flex flex-col">
-              <span className="font-bold text-foreground tracking-tight">XZ1</span>
+              <span className="font-bold text-foreground tracking-tight text-sm">XZ1 Corp Manager</span>
               <span className="text-xs text-muted-foreground">Executive Command</span>
             </div>
           )}

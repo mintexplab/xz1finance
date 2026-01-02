@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { LogIn } from 'lucide-react';
+import xz1Logo from '@/assets/xz1-logo.png';
 
 export default function Auth() {
   const navigate = useNavigate();
@@ -33,23 +34,21 @@ export default function Auth() {
         <div className="glass-card p-8">
           {/* Logo */}
           <div className="flex justify-center mb-8">
-            <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-primary to-primary/50 flex items-center justify-center glow-pink">
-              <span className="text-3xl font-bold">X</span>
-            </div>
+            <img src={xz1Logo} alt="XZ1" className="h-20 w-auto glow-pink" />
           </div>
 
           <h1 className="text-2xl font-bold text-center mb-2">Welcome</h1>
           <p className="text-muted-foreground text-center mb-8">
-            XZ1 Recording Ventures Financial Dashboard
+            XZ1 Corporation Manager
           </p>
 
           <Button onClick={signIn} className="w-full gap-2" size="lg">
             <LogIn className="h-4 w-4" />
-            Sign In with Auth0
+            Sign in with XZ1 Recording Ventures SSO
           </Button>
 
           <p className="mt-6 text-center text-xs text-muted-foreground">
-            Secure authentication powered by Auth0
+            Secure authentication powered by SSO
           </p>
         </div>
       </div>
