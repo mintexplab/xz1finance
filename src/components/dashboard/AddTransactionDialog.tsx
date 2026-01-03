@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Plus } from 'lucide-react';
 import { useManualTransactions, CreateTransactionInput } from '@/hooks/useManualTransactions';
+import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 
 interface AddTransactionDialogProps {
@@ -30,7 +31,8 @@ const categories = [
 
 export function AddTransactionDialog({ onSuccess }: AddTransactionDialogProps) {
   const [open, setOpen] = useState(false);
-  const { createTransaction, loading } = useManualTransactions();
+  const { user } = useAuth();
+  const { createTransaction, loading } = useManualTransactions(user?.sub);
   
   const [formData, setFormData] = useState<CreateTransactionInput>({
     amount: 0,

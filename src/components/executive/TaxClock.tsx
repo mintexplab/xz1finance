@@ -1,14 +1,20 @@
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { differenceInDays, differenceInMonths, addMonths, format } from 'date-fns';
-import { Clock, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Clock, AlertTriangle, CheckCircle, Pencil } from 'lucide-react';
+import { EditTaxDeadlineDialog } from './EditTaxDeadlineDialog';
 
 interface TaxClockProps {
-  incorporationDate?: Date;
+  incorporationDate?: string | null;
+  onUpdateIncorporationDate?: (date: string) => Promise<void>;
 }
 
-export function TaxClock({ incorporationDate }: TaxClockProps) {
+export function TaxClock({ incorporationDate, onUpdateIncorporationDate }: TaxClockProps) {
+  const [editOpen, setEditOpen] = useState(false);
+  
   // Default to a placeholder if no incorporation date is set
-  const incDate = incorporationDate || new Date('2024-12-01');
+  const incDate = incorporationDate ? new Date(incorporationDate) : new Date('2024-12-01');
   const taxDeadline = addMonths(incDate, 15);
   const today = new Date();
   
@@ -35,13 +41,21 @@ export function TaxClock({ incorporationDate }: TaxClockProps) {
   const progressPercentage = Math.max(0, Math.min(100, ((450 - daysRemaining) / 450) * 100));
 
   return (
-    <Card className="glass-card overflow-hidden">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-lg font-semibold flex items-center gap-2">
-          <Clock className="h-5 w-5 text-primary" />
-          Hawaii Corporate Tax Clock
-        </CardTitle>
-      </CardHeader>
+    <>
+      <Card className="glass-card overflow-hidden">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-lg font-semibold flex items-center justify-between">
+            <span className="flex items-center gap-2">
+              <Clock className="h-5 w-5 text-primary" />
+              Hawaii Corporate Tax Clock
+            </span>
+            {onUpdateIncorporationDate && (
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditOpen(true)}>
+                <Pencil className="h-4 w-4" />
+              </Button>
+            )}
+          </CardTitle>
+        </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
@@ -93,5 +107,15 @@ export function TaxClock({ incorporationDate }: TaxClockProps) {
         </div>
       </CardContent>
     </Card>
+    
+    {onUpdateIncorporationDate && (
+      <EditTaxDeadlineDialog
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        incorporationDate={incorporationDate || null}
+        onSave={onUpdateIncorporationDate}
+      />
+    )}
+  </>
   );
 }

@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.recurring-transactions]
 verify_jwt = false
+
+[functions.manual-transactions]
+verify_jwt = false
