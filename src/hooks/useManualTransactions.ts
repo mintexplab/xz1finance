@@ -1,5 +1,7 @@
 import { useState, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+
+const FUNCTION_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/manual-transactions`;
 
 export interface ManualTransaction {
   id: string;
@@ -25,30 +27,35 @@ export interface CreateTransactionInput {
   notes?: string;
 }
 
-export function useManualTransactions() {
+export function useManualTransactions(userId?: string) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchTransactions = useCallback(async (dateRange?: { start: Date; end: Date }) => {
+    if (!userId) return [];
+    
     setLoading(true);
     setError(null);
 
     try {
-      let query = supabase
-        .from('manual_transactions')
-        .select('*')
-        .order('transaction_date', { ascending: false });
+      const response = await fetch(FUNCTION_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'list',
+          userId,
+          startDate: dateRange?.start.toISOString().split('T')[0],
+          endDate: dateRange?.end.toISOString().split('T')[0],
+        }),
+      });
 
-      if (dateRange) {
-        query = query
-          .gte('transaction_date', dateRange.start.toISOString().split('T')[0])
-          .lte('transaction_date', dateRange.end.toISOString().split('T')[0]);
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || 'Failed to fetch transactions');
       }
 
-      const { data, error: fetchError } = await query;
-
-      if (fetchError) throw fetchError;
-      return data as ManualTransaction[];
+      const data = await response.json();
+      return data.transactions as ManualTransaction[];
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to fetch transactions';
       setError(message);
@@ -56,27 +63,35 @@ export function useManualTransactions() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [userId]);
 
   const createTransaction = useCallback(async (input: CreateTransactionInput) => {
+    if (!userId) {
+      toast.error('Not authenticated');
+      return null;
+    }
+
     setLoading(true);
     setError(null);
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
+      const response = await fetch(FUNCTION_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'create',
+          userId,
+          data: input,
+        }),
+      });
 
-      const { data, error: insertError } = await supabase
-        .from('manual_transactions')
-        .insert({
-          ...input,
-          user_id: user.id,
-        })
-        .select()
-        .single();
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || 'Failed to create transaction');
+      }
 
-      if (insertError) throw insertError;
-      return data as ManualTransaction;
+      const data = await response.json();
+      return data.transaction as ManualTransaction;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to create transaction';
       setError(message);
@@ -84,19 +99,30 @@ export function useManualTransactions() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [userId]);
 
   const deleteTransaction = useCallback(async (id: string) => {
+    if (!userId) return false;
+
     setLoading(true);
     setError(null);
 
     try {
-      const { error: deleteError } = await supabase
-        .from('manual_transactions')
-        .delete()
-        .eq('id', id);
+      const response = await fetch(FUNCTION_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'delete',
+          userId,
+          id,
+        }),
+      });
 
-      if (deleteError) throw deleteError;
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || 'Failed to delete transaction');
+      }
+
       return true;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to delete transaction';
@@ -105,7 +131,7 @@ export function useManualTransactions() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [userId]);
 
   return {
     loading,

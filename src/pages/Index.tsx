@@ -42,7 +42,7 @@ export default function Index() {
   const { user, loading: authLoading, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const { getDashboardSummary, loading: stripeLoading, error: stripeError } = useStripeData();
-  const { fetchTransactions, deleteTransaction, loading: txLoading } = useManualTransactions();
+  const { fetchTransactions, deleteTransaction, loading: txLoading } = useManualTransactions(user?.sub);
   const {
     transactions: recurringTxs,
     loading: recurringLoading,
@@ -245,7 +245,7 @@ export default function Index() {
               onGenerateStatement={handleGenerateStatement}
             />
           </div>
-          <TaxClock incorporationDate={new Date('2024-12-01')} />
+          <TaxClock incorporationDate={null} />
         </div>
 
         {/* Charts Section */}

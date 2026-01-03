@@ -6,8 +6,10 @@ import { EntityCards } from '@/components/executive/EntityCards';
 import { DomainPortfolio } from '@/components/executive/DomainPortfolio';
 import { EditEntityDialog } from '@/components/executive/EditEntityDialog';
 import { CorporateCalendar } from '@/components/executive/CorporateCalendar';
+import { TaxClock } from '@/components/executive/TaxClock';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Building2, Calendar } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Building2, Calendar, Globe, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 
 export default function CorporateVault() {
@@ -52,6 +54,10 @@ export default function CorporateVault() {
   const state = entity?.state_of_incorporation || 'Hawaii';
   const incorporationDate = entity?.incorporation_date;
   const fiscalYearEnd = entity?.fiscal_year_end || 'December 31';
+
+  const handleUpdateIncorporationDate = async (date: string) => {
+    await saveEntity({ incorporation_date: date });
+  };
 
   return (
     <div className="bg-background">
@@ -105,29 +111,61 @@ export default function CorporateVault() {
           </CardContent>
         </Card>
 
-        {/* Entity Cards & Calendar */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-          <div className="lg:col-span-2">
+        {/* Tabbed Content */}
+        <Tabs defaultValue="entity" className="space-y-6">
+          <TabsList className="glass-card p-1">
+            <TabsTrigger value="entity" className="gap-2">
+              <Building2 className="h-4 w-4" />
+              Entity
+            </TabsTrigger>
+            <TabsTrigger value="domains" className="gap-2">
+              <Globe className="h-4 w-4" />
+              Domains
+            </TabsTrigger>
+            <TabsTrigger value="calendar" className="gap-2">
+              <Calendar className="h-4 w-4" />
+              Calendar
+            </TabsTrigger>
+            <TabsTrigger value="tax" className="gap-2">
+              <Clock className="h-4 w-4" />
+              Tax Clock
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="entity">
             <EntityCards 
               entity={entity} 
               onEdit={() => setEditEntityOpen(true)} 
             />
-          </div>
-          <CorporateCalendar
-            events={events}
-            onAdd={addEvent}
-            onUpdate={updateEvent}
-            onDelete={deleteEvent}
-          />
-        </div>
+          </TabsContent>
 
-        {/* Domain Portfolio */}
-        <DomainPortfolio 
-          domains={domains}
-          onAdd={addDomain}
-          onUpdate={updateDomain}
-          onDelete={deleteDomain}
-        />
+          <TabsContent value="domains">
+            <DomainPortfolio 
+              domains={domains}
+              onAdd={addDomain}
+              onUpdate={updateDomain}
+              onDelete={deleteDomain}
+            />
+          </TabsContent>
+
+          <TabsContent value="calendar">
+            <CorporateCalendar
+              events={events}
+              onAdd={addEvent}
+              onUpdate={updateEvent}
+              onDelete={deleteEvent}
+            />
+          </TabsContent>
+
+          <TabsContent value="tax">
+            <div className="max-w-md">
+              <TaxClock 
+                incorporationDate={incorporationDate}
+                onUpdateIncorporationDate={handleUpdateIncorporationDate}
+              />
+            </div>
+          </TabsContent>
+        </Tabs>
 
         {/* Edit Entity Dialog */}
         <EditEntityDialog
