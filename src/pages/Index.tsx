@@ -4,6 +4,7 @@ import { useStripeData, DashboardSummary } from '@/hooks/useStripeData';
 import { useManualTransactions, ManualTransaction } from '@/hooks/useManualTransactions';
 import { useRecurringTransactions } from '@/hooks/useRecurringTransactions';
 import { useAuth } from '@/hooks/useAuth';
+import { useCorporateVault } from '@/hooks/useCorporateVault';
 import { formatCurrency } from '@/lib/formatters';
 import { Header } from '@/components/dashboard/Header';
 import { StatCard } from '@/components/dashboard/StatCard';
@@ -51,6 +52,7 @@ export default function Index() {
     deleteTransaction: deleteRecurringTx,
     calculateRecurringTotal,
   } = useRecurringTransactions(user?.sub);
+  const { entity, saveEntity } = useCorporateVault(user?.sub);
   
   const [stripeData, setStripeData] = useState<DashboardSummary | null>(null);
   const [manualTxs, setManualTxs] = useState<ManualTransaction[]>([]);
@@ -245,7 +247,12 @@ export default function Index() {
               onGenerateStatement={handleGenerateStatement}
             />
           </div>
-          <TaxClock incorporationDate={null} />
+          <TaxClock 
+            incorporationDate={entity?.incorporation_date || null} 
+            onUpdateIncorporationDate={async (date) => {
+              await saveEntity({ incorporation_date: date });
+            }}
+          />
         </div>
 
         {/* Charts Section */}

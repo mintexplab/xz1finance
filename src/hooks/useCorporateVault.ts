@@ -106,7 +106,7 @@ export function useCorporateVault(userId: string | undefined) {
       const response = await fetch(`${FUNCTION_URL}/entity`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, ...data }),
+        body: JSON.stringify({ userId, action: 'save', ...data }),
       });
 
       if (!response.ok) {
@@ -131,7 +131,7 @@ export function useCorporateVault(userId: string | undefined) {
       const response = await fetch(`${FUNCTION_URL}/domains`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, ...data }),
+        body: JSON.stringify({ userId, action: 'save', ...data }),
       });
 
       if (!response.ok) {
@@ -205,7 +205,7 @@ export function useCorporateVault(userId: string | undefined) {
       const response = await fetch(`${FUNCTION_URL}/events`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, ...data }),
+        body: JSON.stringify({ userId, action: 'save', ...data }),
       });
 
       if (!response.ok) {

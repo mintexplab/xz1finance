@@ -40,8 +40,8 @@ serve(async (req) => {
       if (req.method === "POST") {
         const { userId: _, action, ...entityData } = body as Record<string, unknown>;
         
-        // If action is 'get' or no data provided, fetch the entity
-        if (action === 'get' || Object.keys(entityData).length === 0) {
+        // If action is 'get', fetch the entity
+        if (action === 'get') {
           console.log("Fetching business entity for user:", userId);
           const { data, error } = await supabase
             .from("business_entity")
@@ -107,8 +107,8 @@ serve(async (req) => {
       if (req.method === "POST") {
         const { userId: _, action, ...domainData } = body as Record<string, unknown>;
         
-        // If action is 'get' or no data provided, fetch domains
-        if (action === 'get' || Object.keys(domainData).length === 0) {
+        // If action is 'get', fetch domains
+        if (action === 'get') {
           console.log("Fetching domains for user:", userId);
           const { data, error } = await supabase
             .from("domains")
@@ -193,7 +193,7 @@ serve(async (req) => {
       if (req.method === "POST") {
         const { userId: _, action, ...eventData } = body as Record<string, unknown>;
         
-        if (action === 'get' || Object.keys(eventData).length === 0) {
+        if (action === 'get') {
           console.log("Fetching corporate events for user:", userId);
           const { data, error } = await supabase
             .from("corporate_events")
