@@ -4,8 +4,8 @@ import { Auth0Provider } from "@auth0/auth0-react";
 import App from "./App.tsx";
 import "./index.css";
 
-const auth0Domain = "sso.xz1recordingventures.com";
-const auth0ClientId = "l4gQ5SV5QTTvq2TVxsM8DRoStTZyTKRu";
+const auth0Domain = "access.xz1id.com";
+const auth0ClientId = "8ehwDk7TPq4lzr2cJKnqr8HvEZXDLaua";
 
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
